@@ -5,11 +5,16 @@ from typing import Optional
 class Settings(BaseSettings):
     """Global configuration for load predictor"""
 
-    # WAP Configuration
-    wap_iceberg_database: str = "default"
-    wap_endpoint: Optional[str] = None
+    # WAP/StarRocks Configuration
+    wap_host: str = "starrocks-prod.webex.com"
+    wap_port: int = 9030
     wap_username: Optional[str] = None
     wap_password: Optional[str] = None
+    wap_use_pure: bool = False
+    wap_ssl_disabled: bool = False
+    wap_ssl_verify_cert: bool = True
+    wap_ssl_verify_identity: bool = False
+    wap_ssl_ca: Optional[str] = "/etc/ssl/cert.pem"
 
     # Output
     output_dir: str = "data/curves"

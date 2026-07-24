@@ -64,10 +64,10 @@ def generate_curves(
     try:
         # Initialize WAP connector
         wap_config = WAPConfig(
-            iceberg_database=settings.wap_iceberg_database,
-            endpoint=settings.wap_endpoint,
-            username=settings.wap_username,
-            password=settings.wap_password,
+            host="starrocks-prod.webex.com",
+            port=9030,
+            username=settings.wap_username or "",
+            password=settings.wap_password or "",
         )
         connector = WAPConnector(wap_config)
 
@@ -80,6 +80,10 @@ def generate_curves(
             include_test=include_test,
         )
         click.echo(f"  Retrieved {len(df)} records")
+
+        if df.empty:
+            click.echo("⚠️  No data returned from WAP", err=True)
+            raise click.Abort()
 
         # Build curves
         click.echo("Building curves...")
@@ -103,11 +107,8 @@ def generate_curves(
             },
         )
         click.echo(f"✓ Curve written to {filepath}")
+        connector.close()
 
-    except NotImplementedError as e:
-        click.echo(f"❌ Error: {e}", err=True)
-        click.echo("WAP connector not yet fully implemented", err=True)
-        raise click.Abort()
     except Exception as e:
         click.echo(f"❌ Error: {e}", err=True)
         raise click.Abort()
