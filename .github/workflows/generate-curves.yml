@@ -1,0 +1,88 @@
+name: Generate Curves
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment (cprod, cstage, cint)'
+        required: true
+        default: 'cprod'
+        type: choice
+        options:
+          - cprod
+          - cstage
+          - cint
+      region:
+        description: 'Region (AMER, EMEAR, APAC)'
+        required: true
+        default: 'AMER'
+        type: choice
+        options:
+          - AMER
+          - EMEAR
+          - APAC
+      weeks_back:
+        description: 'Number of weeks of data'
+        required: true
+        default: '52'
+        type: string
+
+jobs:
+  generate:
+    runs-on: [self-hosted, wap-connected]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Generate curves
+        run: |
+          python -m load_predictor generate-curves \
+            --env ${{ inputs.env }} \
+            --region ${{ inputs.region }} \
+            --weeks-back ${{ inputs.weeks_back }} \
+            --output-dir data/curves
+        env:
+          LP_WAP_ICEBERG_DATABASE: ${{ secrets.WAP_ICEBERG_DATABASE }}
+          LP_WAP_ENDPOINT: ${{ secrets.WAP_ENDPOINT }}
+          LP_WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
+          LP_WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
+
+      - name: Validate curves
+        run: |
+          python -m load_predictor validate-curves data/curves/*.json
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update curves for ${{ inputs.env }}/${{ inputs.region }}'
+          title: 'Curve Update: ${{ inputs.env }}/${{ inputs.region }}'
+          body: |
+            Generated curves for **${{ inputs.env }}/${{ inputs.region }}**
+
+            - Weeks of data: ${{ inputs.weeks_back }}
+            - Generated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please review the curves and approve if they look correct.
+          branch: curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          delete-branch: true
+
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          gh release create v$(date +%Y-%m-%d)-${{ inputs.env }}-${{ inputs.region }} \
+            --title "Curves ${{ inputs.env }}/${{ inputs.region }} - $(date +%Y-%m-%d)" \
+            --notes "Curves generated for ${{ inputs.env }}/${{ inputs.region }}" \
+            data/curves/${{ inputs.env }}_${{ inputs.region | lower }}.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
