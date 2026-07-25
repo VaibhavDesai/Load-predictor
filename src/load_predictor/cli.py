@@ -153,6 +153,8 @@ def generate_curves(
                 "data_range_start": start_date,
                 "data_range_end": end_date,
                 "total_samples": len(df),
+                "aggregation_interval": interval,
+                "aggregation_method": aggregation,
                 "summary": stats,
             },
         )

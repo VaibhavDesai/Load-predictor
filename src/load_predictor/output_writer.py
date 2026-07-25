@@ -50,6 +50,8 @@ class OutputWriter:
                 "data_range_start": metadata.get("data_range_start"),
                 "data_range_end": metadata.get("data_range_end"),
                 "total_samples": metadata.get("total_samples", 0),
+                "aggregation_interval": metadata.get("aggregation_interval"),
+                "aggregation_method": metadata.get("aggregation_method"),
                 "summary": metadata.get("summary", {}),
             },
             "curves": curve,
