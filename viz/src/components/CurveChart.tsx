@@ -16,6 +16,10 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
     let globalYMin = Infinity
     let globalYMax = -Infinity
 
+    // Determine interval from metadata (default 1800 seconds = 30 minutes)
+    const intervalSeconds = data.meta.aggregation_interval || 1800
+    const intervalMinutes = intervalSeconds / 60
+
     // Create one trace per weekday, with x-axis showing full week (0-168 hours)
     Object.entries(data.curves).forEach(([weekdayStr, slots], dayIndex) => {
       const weekday = parseInt(weekdayStr)
@@ -32,12 +36,13 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
 
       sortedSlots.forEach(([slotStr, value]) => {
         const slot = parseInt(slotStr)
-        const hour = Math.floor(slot / 60)
-        const minute = slot % 60
+        const minuteOfDay = slot * intervalMinutes
+        const hour = Math.floor(minuteOfDay / 60)
+        const minute = minuteOfDay % 60
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
 
         // Cumulative hours from start of week
-        x.push(dayStartHour + slot / 60)
+        x.push(dayStartHour + minuteOfDay / 60)
         y.push(value as number)
         customData.push(`${dayName} ${timeStr}`)
 

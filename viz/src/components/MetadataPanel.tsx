@@ -17,7 +17,9 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => 
     return `${Math.round(seconds / 3600)}h`
   }
 
-  const formatPeakTime = (minuteOfDay: number) => {
+  const formatPeakTime = (slot: number, intervalSeconds: number = 1800) => {
+    const intervalMinutes = intervalSeconds / 60
+    const minuteOfDay = slot * intervalMinutes
     const hours = Math.floor(minuteOfDay / 60)
     const minutes = minuteOfDay % 60
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
@@ -84,7 +86,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => 
               {meta.summary.peak.value}
             </div>
             <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-              {`${WEEKDAY_NAMES[meta.summary.peak.weekday - 1]} at ${formatPeakTime(meta.summary.peak.slot)}`}
+              {`${WEEKDAY_NAMES[meta.summary.peak.weekday - 1]} at ${formatPeakTime(meta.summary.peak.slot, meta.aggregation_interval || 1800)}`}
             </div>
           </div>
 

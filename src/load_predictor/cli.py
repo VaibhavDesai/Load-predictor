@@ -138,7 +138,7 @@ def generate_curves(
         # Build curves
         click.echo("Building curves...")
         builder = CurveBuilder()
-        curves = builder.process_timeseries(df, aggregate_by=aggregation)
+        curves = builder.process_timeseries(df, aggregate_by=aggregation, interval_seconds=interval)
         stats = builder.get_statistics(curves)
         click.echo(f"  Peak: {stats['peak']['value']} at weekday {stats['peak']['weekday']}")
 

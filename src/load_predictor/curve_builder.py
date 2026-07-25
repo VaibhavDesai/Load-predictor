@@ -23,6 +23,7 @@ class CurveBuilder:
         self,
         df: pd.DataFrame,
         aggregate_by: str = "mean",
+        interval_seconds: int = 1800,
     ) -> Dict[int, Dict[int, float]]:
         """
         Convert timeseries data into aggregated curve.
@@ -30,9 +31,11 @@ class CurveBuilder:
         Args:
             df: DataFrame with columns [timestamp, count]
             aggregate_by: 'mean' or 'sum' for aggregation across weeks
+            interval_seconds: Time bucket size in seconds (default 1800 = 30min)
 
         Returns:
-            Curve dict: {weekday: {minute_slot: value, ...}, ...}
+            Curve dict: {weekday: {slot: value, ...}, ...}
+            Where slot is the interval bucket number (0-47 for 30min intervals)
         """
         if df.empty:
             raise ValueError("Input dataframe is empty")
@@ -42,8 +45,12 @@ class CurveBuilder:
         df["weekday"] = df["timestamp"].dt.isocalendar().day  # 1=Monday, 7=Sunday
         df["minute_of_day"] = df["timestamp"].dt.hour * 60 + df["timestamp"].dt.minute
 
-        # Group by weekday and minute slot
-        grouped = df.groupby(["weekday", "minute_of_day"])["count"]
+        # Calculate which bucket each minute falls into based on interval
+        interval_minutes = interval_seconds // 60
+        df["slot"] = df["minute_of_day"] // interval_minutes
+
+        # Group by weekday and interval slot
+        grouped = df.groupby(["weekday", "slot"])["count"]
 
         if aggregate_by == "mean":
             slots_by_weekday = grouped.mean()
@@ -57,7 +64,7 @@ class CurveBuilder:
         for (weekday, slot), value in slots_by_weekday.items():
             if weekday not in curves:
                 curves[weekday] = {}
-            curves[weekday][slot] = round(float(value), 2)
+            curves[weekday][int(slot)] = round(float(value), 2)
 
         return curves
 
