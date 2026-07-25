@@ -70,25 +70,11 @@ jobs:
         run: |
           python -m load_predictor validate-curves data/curves/*.json
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Build visualization
-        run: |
-          cd viz
-          npm install
-          npm run build
-          mkdir -p ../docs
-          cp -r dist/* ../docs/
-
-      - name: Create PRs with GitHub App
+      - name: Create PR with GitHub App
         run: |
           git config user.name "Load Predictor Bot"
           git config user.email "bot@load-predictor.local"
 
-          # Create curves branch and PR
           BRANCH_NAME="curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}"
           REGION_LOWER=$(echo "${{ inputs.region }}" | tr '[:upper:]' '[:lower:]')
           CURVE_FILE="${{ inputs.env }}_${REGION_LOWER}.json"
@@ -103,18 +89,6 @@ jobs:
               --title "Curve Update: ${{ inputs.env }}/${{ inputs.region }}" \
               --body "Generated curves for **${{ inputs.env }}/${{ inputs.region }}**\n\nData period: Last ${{ inputs.weeks_back }} weeks\n\n[📊 View in Load Predictor](${VISUALIZER_URL})\n\nGenerated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
               --head ${BRANCH_NAME}
-          fi
-
-          # Create visualization branch and PR
-          git checkout main
-          git checkout -b deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
-          git add -f docs/
-          if git commit -m "chore: deploy visualization for ${{ inputs.env }}/${{ inputs.region }}"; then
-            git push -u origin deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
-            gh pr create \
-              --title "Deploy: Update visualization for ${{ inputs.env }}/${{ inputs.region }}" \
-              --body "Updated visualization in /docs for GitHub Pages\n\nEnvironment: ${{ inputs.env }}\nRegion: ${{ inputs.region }}" \
-              --head deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
           fi
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
