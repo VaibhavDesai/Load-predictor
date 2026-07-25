@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 class MockConfig(BaseModel):
     """Configuration for mock connector"""
     seed: int = 42
-    weeks_back: int = 52
+    start_date: str = None  # ISO format: YYYY-MM-DD
+    end_date: str = None    # ISO format: YYYY-MM-DD
+    interval: int = 1800    # Aggregation interval in seconds
     base_load: int = 500
     peak_hour: int = 13
 
@@ -48,7 +50,8 @@ class MockConnector:
         self,
         env: str,
         region: str,
-        weeks_back: int,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         include_test: bool = False,
     ) -> pd.DataFrame:
         """
@@ -57,7 +60,8 @@ class MockConnector:
         Args:
             env: Environment (cprod, cstage, cint)
             region: Region (AMER, EMEAR, APAC)
-            weeks_back: Number of weeks of historical data
+            start_date: Start date (ISO format: YYYY-MM-DD), uses config if not provided
+            end_date: End date (ISO format: YYYY-MM-DD), uses config if not provided
             include_test: Include test meetings (ignored in mock)
 
         Returns:
@@ -71,15 +75,26 @@ class MockConnector:
 
         pattern = self.ENV_PATTERNS[env][region]
 
-        # Generate timestamps
-        end_date = datetime.utcnow()
-        start_date = end_date - timedelta(weeks=weeks_back)
+        # Use provided dates or fall back to config
+        start_date = start_date or self.config.start_date
+        end_date = end_date or self.config.end_date
+
+        # Parse ISO dates
+        if start_date:
+            start_date_obj = datetime.fromisoformat(start_date)
+        else:
+            start_date_obj = datetime.utcnow() - timedelta(weeks=52)
+
+        if end_date:
+            end_date_obj = datetime.fromisoformat(end_date)
+        else:
+            end_date_obj = datetime.utcnow()
 
         data = []
 
         # Generate realistic patterns
-        current_date = start_date
-        while current_date < end_date:
+        current_date = start_date_obj
+        while current_date < end_date_obj:
             weekday = current_date.weekday()  # 0=Monday, 6=Sunday
             hour = current_date.hour
 
@@ -114,7 +129,7 @@ class MockConnector:
 
         logger.info(
             f"Generated {len(data)} mock data points for "
-            f"{env}/{region}, {weeks_back} weeks back"
+            f"{env}/{region}, from {start_date_obj.date()} to {end_date_obj.date()}"
         )
 
         return pd.DataFrame(data)

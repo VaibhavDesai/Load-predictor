@@ -6,6 +6,7 @@ Supports both real WAP data and mock data for testing.
 import click
 from pathlib import Path
 from typing import Optional
+from datetime import datetime, timedelta
 
 from .config import settings
 from .curve_builder import CurveBuilder
@@ -33,10 +34,28 @@ def cli():
     help="Region",
 )
 @click.option(
-    "--weeks-back",
+    "--start-date",
+    type=str,
+    default=None,
+    help="Start date (ISO format: YYYY-MM-DD). Defaults to 52 weeks ago.",
+)
+@click.option(
+    "--end-date",
+    type=str,
+    default=None,
+    help="End date (ISO format: YYYY-MM-DD). Defaults to today.",
+)
+@click.option(
+    "--interval",
     type=int,
-    default=52,
-    help="Number of weeks of historical data",
+    default=1800,
+    help="Aggregation interval in seconds (default 1800 = 30min)",
+)
+@click.option(
+    "--aggregation",
+    type=click.Choice(["mean", "sum"]),
+    default="mean",
+    help="Aggregation method",
 )
 @click.option(
     "--include-test",
@@ -52,23 +71,37 @@ def cli():
 def generate_curves(
     env: str,
     region: str,
-    weeks_back: int,
+    start_date: Optional[str],
+    end_date: Optional[str],
+    interval: int,
+    aggregation: str,
     include_test: bool,
     output_dir: str,
 ):
     """Generate meeting prediction curves (mock or WAP data)"""
 
+    # Calculate date range if not provided
+    if not end_date:
+        end_date = datetime.utcnow().strftime("%Y-%m-%d")
+    if not start_date:
+        start_dt = datetime.utcnow() - timedelta(weeks=52)
+        start_date = start_dt.strftime("%Y-%m-%d")
+
     mode = settings.connector_mode
     click.echo(f"Generating curves for {env}/{region}...")
     click.echo(f"  Mode: {mode.upper()}")
-    click.echo(f"  Weeks of data: {weeks_back}")
+    click.echo(f"  Date range: {start_date} to {end_date}")
+    click.echo(f"  Interval: {interval}s")
+    click.echo(f"  Aggregation: {aggregation}")
 
     try:
         # Initialize connector (mock or WAP)
         if mode == "mock":
             click.echo("Using mock data (demo mode)")
             mock_config = MockConfig(
-                weeks_back=weeks_back,
+                start_date=start_date,
+                end_date=end_date,
+                interval=interval,
             )
             connector = MockConnector(mock_config)
         else:
@@ -92,7 +125,8 @@ def generate_curves(
         df = connector.query_meetings_data(
             env=env,
             region=region,
-            weeks_back=weeks_back,
+            start_date=start_date,
+            end_date=end_date,
             include_test=include_test,
         )
         click.echo(f"✓ Retrieved {len(df)} records")
@@ -104,7 +138,7 @@ def generate_curves(
         # Build curves
         click.echo("Building curves...")
         builder = CurveBuilder()
-        curves = builder.process_timeseries(df, aggregate_by="mean")
+        curves = builder.process_timeseries(df, aggregate_by=aggregation)
         stats = builder.get_statistics(curves)
         click.echo(f"  Peak: {stats['peak']['value']} at weekday {stats['peak']['weekday']}")
 
@@ -116,8 +150,8 @@ def generate_curves(
             env=env,
             region=region,
             metadata={
-                "data_range_start": df["timestamp"].min().isoformat(),
-                "data_range_end": df["timestamp"].max().isoformat(),
+                "data_range_start": start_date,
+                "data_range_end": end_date,
                 "total_samples": len(df),
                 "summary": stats,
             },

@@ -2,8 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "react-viz",
-      "url": "http://localhost:5173"
+      "name": "load-predictor-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "viz", "run", "dev"],
+      "port": 5173
     }
   ]
 }

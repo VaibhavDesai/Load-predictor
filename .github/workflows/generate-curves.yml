@@ -21,11 +21,29 @@ on:
           - AMER
           - EMEAR
           - APAC
-      weeks_back:
-        description: 'Number of weeks of data'
-        required: true
-        default: '52'
+      start_date:
+        description: 'Start date (ISO format: YYYY-MM-DD)'
+        required: false
+        default: ''
         type: string
+      end_date:
+        description: 'End date (ISO format: YYYY-MM-DD)'
+        required: false
+        default: ''
+        type: string
+      interval:
+        description: 'Aggregation interval in seconds (default 1800 = 30min)'
+        required: false
+        default: '1800'
+        type: string
+      aggregation:
+        description: 'Aggregation method (mean or sum)'
+        required: false
+        default: 'mean'
+        type: choice
+        options:
+          - mean
+          - sum
 
 jobs:
   generate:
@@ -54,12 +72,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
+      - name: Calculate date range
+        id: dates
+        run: |
+          if [ -z "${{ inputs.start_date }}" ] || [ -z "${{ inputs.end_date }}" ]; then
+            END_DATE=$(date -u +%Y-%m-%d)
+            START_DATE=$(date -u -v-52d +%Y-%m-%d)
+          else
+            START_DATE=${{ inputs.start_date }}
+            END_DATE=${{ inputs.end_date }}
+          fi
+          echo "start_date=$START_DATE" >> $GITHUB_OUTPUT
+          echo "end_date=$END_DATE" >> $GITHUB_OUTPUT
+
       - name: Generate curves
         run: |
           python -m load_predictor generate-curves \
             --env ${{ inputs.env }} \
             --region ${{ inputs.region }} \
-            --weeks-back ${{ inputs.weeks_back }} \
+            --start-date ${{ steps.dates.outputs.start_date }} \
+            --end-date ${{ steps.dates.outputs.end_date }} \
+            --interval ${{ inputs.interval }} \
+            --aggregation ${{ inputs.aggregation }} \
             --output-dir data/curves
         env:
           LP_CONNECTOR_MODE: mock
@@ -87,7 +121,7 @@ jobs:
             git push -u origin ${BRANCH_NAME}
             gh pr create \
               --title "Curve Update: ${{ inputs.env }}/${{ inputs.region }}" \
-              --body "Generated curves for **${{ inputs.env }}/${{ inputs.region }}**\n\nData period: Last ${{ inputs.weeks_back }} weeks\n\n[📊 View in Load Predictor](${VISUALIZER_URL})\n\nGenerated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --body "Generated curves for **${{ inputs.env }}/${{ inputs.region }}**\n\nData period: ${{ steps.dates.outputs.start_date }} to ${{ steps.dates.outputs.end_date }}\nInterval: ${{ inputs.interval }}s\nAggregation: ${{ inputs.aggregation }}\n\n[📊 View in Load Predictor](${VISUALIZER_URL})\n\nGenerated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
               --head ${BRANCH_NAME}
           fi
         env:
