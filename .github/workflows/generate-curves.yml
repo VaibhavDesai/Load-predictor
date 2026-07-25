@@ -78,12 +78,36 @@ jobs:
           branch: curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
           delete-branch: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Build visualization
+        run: |
+          cd viz
+          npm install
+          npm run build
+
+          # Copy built files to /docs for GitHub Pages
+          mkdir -p ../docs
+          cp -r dist/* ../docs/
+
+      - name: Commit and push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          git add docs/ data/curves/
+
+          git commit -m "chore: update curves and visualization for ${{ inputs.env }}/${{ inputs.region }}" || true
+          git push
+
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           gh release create v$(date +%Y-%m-%d)-${{ inputs.env }}-${{ inputs.region }} \
             --title "Curves ${{ inputs.env }}/${{ inputs.region }} - $(date +%Y-%m-%d)" \
             --notes "Curves generated for ${{ inputs.env }}/${{ inputs.region }}" \
-            data/curves/${{ inputs.env }}_${{ inputs.region | lower }}.json
+            data/curves/${{ inputs.env }}_$(echo ${{ inputs.region }} | tr '[:upper:]' '[:lower:]').json || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
