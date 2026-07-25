@@ -5,7 +5,11 @@ from typing import Optional
 class Settings(BaseSettings):
     """Global configuration for load predictor"""
 
-    # WAP/StarRocks Configuration
+    # Mode: 'mock' for demo/testing, 'wap' for production
+    # Set to 'mock' by default for public repos
+    connector_mode: str = "mock"
+
+    # WAP/StarRocks Configuration (production only)
     wap_host: str = "starrocks-prod.webex.com"
     wap_port: int = 9030
     wap_username: Optional[str] = None
@@ -15,6 +19,10 @@ class Settings(BaseSettings):
     wap_ssl_verify_cert: bool = True
     wap_ssl_verify_identity: bool = False
     wap_ssl_ca: Optional[str] = "/etc/ssl/cert.pem"
+
+    # Mock connector settings
+    mock_seed: int = 42
+    mock_weeks_back: int = 52
 
     # Output
     output_dir: str = "data/curves"

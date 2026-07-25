@@ -50,3 +50,13 @@ Thumbs.db
 # Project specific
 data/
 *.json.bak
+
+# WAP-specific (production only)
+wap_connector.py
+.env
+.env.local
+starr*.py
+
+# Credentials
+*_credentials*
+*_secret*

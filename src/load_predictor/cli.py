@@ -1,5 +1,6 @@
 """
 Command-line interface for load predictor.
+Supports both real WAP data and mock data for testing.
 """
 
 import click
@@ -7,9 +8,9 @@ from pathlib import Path
 from typing import Optional
 
 from .config import settings
-from .wap_connector import WAPConnector, WAPConfig
 from .curve_builder import CurveBuilder
 from .output_writer import OutputWriter
+from .mock_connector import MockConnector, MockConfig
 
 
 @click.group()
@@ -55,34 +56,49 @@ def generate_curves(
     include_test: bool,
     output_dir: str,
 ):
-    """Generate meeting prediction curves from WAP data"""
+    """Generate meeting prediction curves (mock or WAP data)"""
 
+    mode = settings.connector_mode
     click.echo(f"Generating curves for {env}/{region}...")
+    click.echo(f"  Mode: {mode.upper()}")
     click.echo(f"  Weeks of data: {weeks_back}")
-    click.echo(f"  Include test meetings: {include_test}")
 
     try:
-        # Initialize WAP connector
-        wap_config = WAPConfig(
-            host="starrocks-prod.webex.com",
-            port=9030,
-            username=settings.wap_username or "",
-            password=settings.wap_password or "",
-        )
-        connector = WAPConnector(wap_config)
+        # Initialize connector (mock or WAP)
+        if mode == "mock":
+            click.echo("Using mock data (demo mode)")
+            mock_config = MockConfig(
+                weeks_back=weeks_back,
+            )
+            connector = MockConnector(mock_config)
+        else:
+            click.echo("Querying WAP data...")
+            # Try to import WAP connector (will fail if not in repo)
+            try:
+                from .wap_connector import WAPConnector, WAPConfig
+                wap_config = WAPConfig(
+                    host=settings.wap_host,
+                    port=settings.wap_port,
+                    username=settings.wap_username or "",
+                    password=settings.wap_password or "",
+                )
+                connector = WAPConnector(wap_config)
+            except ImportError:
+                click.echo("❌ WAP connector not available (gitignored for public repo)", err=True)
+                click.echo("Use mode='mock' or provide wap_connector.py", err=True)
+                raise click.Abort()
 
         # Query data
-        click.echo("Querying WAP data...")
         df = connector.query_meetings_data(
             env=env,
             region=region,
             weeks_back=weeks_back,
             include_test=include_test,
         )
-        click.echo(f"  Retrieved {len(df)} records")
+        click.echo(f"✓ Retrieved {len(df)} records")
 
         if df.empty:
-            click.echo("⚠️  No data returned from WAP", err=True)
+            click.echo("⚠️  No data returned", err=True)
             raise click.Abort()
 
         # Build curves
@@ -107,7 +123,6 @@ def generate_curves(
             },
         )
         click.echo(f"✓ Curve written to {filepath}")
-        connector.close()
 
     except Exception as e:
         click.echo(f"❌ Error: {e}", err=True)

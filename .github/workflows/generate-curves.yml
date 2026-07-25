@@ -52,8 +52,9 @@ jobs:
             --weeks-back ${{ inputs.weeks_back }} \
             --output-dir data/curves
         env:
-          LP_WAP_ICEBERG_DATABASE: ${{ secrets.WAP_ICEBERG_DATABASE }}
-          LP_WAP_ENDPOINT: ${{ secrets.WAP_ENDPOINT }}
+          # Use mock mode by default (no credentials needed)
+          LP_CONNECTOR_MODE: mock
+          # Optional: Use production WAP if credentials available
           LP_WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
           LP_WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
 
