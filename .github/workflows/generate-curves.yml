@@ -90,7 +90,8 @@ jobs:
 
           # Create curves branch and PR
           BRANCH_NAME="curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}"
-          CURVE_FILE="${{ inputs.env }}_${{ inputs.region | lower }}.json"
+          REGION_LOWER=$(echo "${{ inputs.region }}" | tr '[:upper:]' '[:lower:]')
+          CURVE_FILE="${{ inputs.env }}_${REGION_LOWER}.json"
           CURVE_URL="https://raw.githubusercontent.com/${{ github.repository }}/${BRANCH_NAME}/data/curves/${CURVE_FILE}"
           VISUALIZER_URL="https://vaibhavdesai.github.io/Load-predictor/?curve=${CURVE_URL}"
 
