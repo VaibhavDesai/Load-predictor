@@ -62,22 +62,6 @@ jobs:
         run: |
           python -m load_predictor validate-curves data/curves/*.json
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: update curves for ${{ inputs.env }}/${{ inputs.region }}'
-          title: 'Curve Update: ${{ inputs.env }}/${{ inputs.region }}'
-          body: |
-            Generated curves for **${{ inputs.env }}/${{ inputs.region }}**
-
-            - Weeks of data: ${{ inputs.weeks_back }}
-            - Generated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-            Please review the curves and approve if they look correct.
-          branch: curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
-          delete-branch: true
-
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -93,24 +77,34 @@ jobs:
           mkdir -p ../docs
           cp -r dist/* ../docs/
 
-      - name: Commit and push
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+      - name: Create Pull Request with curves
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update curves for ${{ inputs.env }}/${{ inputs.region }}'
+          title: 'Curve Update: ${{ inputs.env }}/${{ inputs.region }}'
+          body: |
+            Automated curve generation
 
-          git add -f docs/ data/curves/
+            **Environment:** ${{ inputs.env }}
+            **Region:** ${{ inputs.region }}
+            **Data period:** Last ${{ inputs.weeks_back }} weeks
 
-          if git commit -m "chore: update curves and visualization for ${{ inputs.env }}/${{ inputs.region }}"; then
-            git push
-          else
-            echo "No changes to commit"
-          fi
+            Generated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          branch: curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          delete-branch: true
 
-      - name: Create Release
-        run: |
-          gh release create v$(date +%Y-%m-%d)-${{ inputs.env }}-${{ inputs.region }} \
-            --title "Curves ${{ inputs.env }}/${{ inputs.region }} - $(date +%Y-%m-%d)" \
-            --notes "Curves generated for ${{ inputs.env }}/${{ inputs.region }}" \
-            data/curves/${{ inputs.env }}_$(echo ${{ inputs.region }} | tr '[:upper:]' '[:lower:]').json || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy visualization to main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: deploy visualization for ${{ inputs.env }}/${{ inputs.region }}'
+          title: 'Deploy: Update visualization for ${{ inputs.env }}/${{ inputs.region }}'
+          body: |
+            Auto-generated visualization update
+
+            **Updated:** /docs for GitHub Pages
+            **Environment:** ${{ inputs.env }}
+            **Region:** ${{ inputs.region }}
+          branch: deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          delete-branch: true
