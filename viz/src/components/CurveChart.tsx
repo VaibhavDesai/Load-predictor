@@ -1,140 +1,134 @@
-import React from 'react'
-import { CurveData, ChartPoint, WEEKDAY_NAMES } from '../types'
-import { curveToChartPoints, formatTime, formatWeekday, getYAxisDomain } from '../utils'
+import React, { useMemo } from 'react'
+import Plot from 'react-plotly.js'
+import { CurveData, WEEKDAY_NAMES } from '../types'
+import { getYAxisDomain } from '../utils'
 
 interface CurveChartProps {
   data: CurveData
   title?: string
 }
 
-export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
-  const points = curveToChartPoints(data.curves)
-  const [yMin, yMax] = getYAxisDomain(points)
+const COLORS = ['#0066cc', '#00a86b', '#ff6b35', '#f7b801', '#c41e3a', '#8b5fbf', '#ff69b4']
 
-  if (points.length === 0) {
+export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
+  const { traces, yMin, yMax } = useMemo(() => {
+    const traces: any[] = []
+    let globalYMin = Infinity
+    let globalYMax = -Infinity
+
+    // Create one trace per weekday, with x-axis showing full week (0-168 hours)
+    Object.entries(data.curves).forEach(([weekdayStr, slots], dayIndex) => {
+      const weekday = parseInt(weekdayStr)
+      const dayName = WEEKDAY_NAMES[weekday - 1]
+      const dayStartHour = (weekday - 1) * 24 // Day 1 starts at 0, Day 2 at 24, etc.
+      const x: number[] = []
+      const y: number[] = []
+      const customData: string[] = []
+
+      // Sort slots numerically
+      const sortedSlots = Object.entries(slots).sort(
+        ([a], [b]) => parseInt(a) - parseInt(b)
+      )
+
+      sortedSlots.forEach(([slotStr, value]) => {
+        const slot = parseInt(slotStr)
+        const hour = Math.floor(slot / 60)
+        const minute = slot % 60
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+
+        // Cumulative hours from start of week
+        x.push(dayStartHour + slot / 60)
+        y.push(value as number)
+        customData.push(`${dayName} ${timeStr}`)
+
+        globalYMin = Math.min(globalYMin, value as number)
+        globalYMax = Math.max(globalYMax, value as number)
+      })
+
+      traces.push({
+        x,
+        y,
+        customdata: customData,
+        name: dayName,
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: COLORS[dayIndex % COLORS.length],
+          width: 2.5,
+        },
+        fill: 'tozeroy',
+        fillcolor: COLORS[dayIndex % COLORS.length] + '1a', // Add transparency
+        hovertemplate:
+          `<b>%{customdata}</b><br>` +
+          'Load: %{y:,.0f}<br>' +
+          '<extra></extra>',
+        visible: true,
+      })
+    })
+
+    const padding = (globalYMax - globalYMin) * 0.1
+    return {
+      traces,
+      yMin: Math.max(0, globalYMin - padding),
+      yMax: globalYMax + padding,
+    }
+  }, [data.curves])
+
+  if (traces.length === 0) {
     return <div className="error">No data to display</div>
   }
 
-  // Simple SVG chart
-  const width = 1200
-  const height = 400
-  const padding = { top: 40, right: 40, bottom: 60, left: 60 }
-  const chartWidth = width - padding.left - padding.right
-  const chartHeight = height - padding.top - padding.bottom
+  const layout = {
+    title: title || undefined,
+    xaxis: {
+      title: 'Day of Week',
+      range: [0, 168],
+      tickvals: [12, 36, 60, 84, 108, 132, 156],
+      ticktext: WEEKDAY_NAMES,
+      gridcolor: '#e0e0e0',
+    },
+    yaxis: {
+      title: 'Load (Count)',
+      range: [yMin, yMax],
+      gridcolor: '#e0e0e0',
+    },
+    plot_bgcolor: '#fafafa',
+    paper_bgcolor: '#ffffff',
+    height: 450,
+    margin: { l: 60, r: 40, t: 40, b: 60 },
+    hovermode: 'x unified',
+    legend: {
+      orientation: 'h',
+      y: -0.15,
+      x: 0,
+      bgcolor: 'rgba(255, 255, 255, 0.8)',
+      bordercolor: '#e0e0e0',
+      borderwidth: 1,
+    },
+  }
 
-  // Scale functions
-  const xScale = (x: number) => (x / (7 * 24 * 60)) * chartWidth
-  const yScale = (y: number) => chartHeight - ((y - yMin) / (yMax - yMin)) * chartHeight
-
-  // Generate path
-  const pathData = points
-    .map((p, i) => {
-      const x = padding.left + xScale(p.x)
-      const y = padding.top + yScale(p.y)
-      return i === 0 ? `M${x},${y}` : `L${x},${y}`
-    })
-    .join(' ')
-
-  // Grid lines for weekdays
-  const dayLines = Array.from({ length: 8 }).map((_, i) => {
-    const x = padding.left + (i / 7) * chartWidth
-    return (
-      <line
-        key={`grid-${i}`}
-        x1={x}
-        y1={padding.top}
-        x2={x}
-        y2={padding.top + chartHeight}
-        stroke="#e0e0e0"
-        strokeWidth="1"
-        strokeDasharray="4,4"
-      />
-    )
-  })
-
-  // Y-axis grid
-  const yGridLines = Array.from({ length: 6 }).map((_, i) => {
-    const y = padding.top + (i / 5) * chartHeight
-    return (
-      <line
-        key={`y-grid-${i}`}
-        x1={padding.left}
-        y1={y}
-        x2={padding.left + chartWidth}
-        y2={y}
-        stroke="#e0e0e0"
-        strokeWidth="1"
-        strokeDasharray="2,2"
-      />
-    )
-  })
+  const config = {
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['pan2d', 'lasso2d'],
+    modeBarButtonsToAdd: [
+      {
+        name: 'Toggle spike lines',
+        icon: { width: 500, height: 500, path: 'M0 0L500 0L500 500L0 500Z' },
+        click: () => {},
+      },
+    ],
+  }
 
   return (
     <div className="chart-container">
-      {title && <h2>{title}</h2>}
-      <svg width={width} height={height} style={{ border: '1px solid #e0e0e0' }}>
-        {/* Grid */}
-        {dayLines}
-        {yGridLines}
-
-        {/* Axes */}
-        <line
-          x1={padding.left}
-          y1={padding.top}
-          x2={padding.left}
-          y2={padding.top + chartHeight}
-          stroke="#000"
-          strokeWidth="2"
-        />
-        <line
-          x1={padding.left}
-          y1={padding.top + chartHeight}
-          x2={padding.left + chartWidth}
-          y2={padding.top + chartHeight}
-          stroke="#000"
-          strokeWidth="2"
-        />
-
-        {/* Curve line */}
-        <path d={pathData} stroke="#0066cc" strokeWidth="2" fill="none" />
-
-        {/* Area under curve */}
-        <path
-          d={`${pathData} L${padding.left + chartWidth},${padding.top + chartHeight} L${padding.left},${padding.top + chartHeight}`}
-          fill="#0066cc"
-          fillOpacity="0.1"
-        />
-
-        {/* Y-axis labels */}
-        {Array.from({ length: 6 }).map((_, i) => {
-          const value = yMin + ((yMax - yMin) * i) / 5
-          const y = padding.top + ((5 - i) / 5) * chartHeight
-          return (
-            <text key={`y-label-${i}`} x={padding.left - 10} y={y + 4} textAnchor="end" fontSize="12">
-              {Math.round(value)}
-            </text>
-          )
-        })}
-
-        {/* X-axis labels (days) */}
-        {WEEKDAY_NAMES.map((day, i) => {
-          const x = padding.left + ((i + 0.5) / 7) * chartWidth
-          return (
-            <text
-              key={`x-label-${i}`}
-              x={x}
-              y={padding.top + chartHeight + 20}
-              textAnchor="middle"
-              fontSize="12"
-            >
-              {day}
-            </text>
-          )
-        })}
-      </svg>
-      <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-        Hover over chart for details (feature: coming soon)
-      </p>
+      <Plot
+        data={traces}
+        layout={layout}
+        config={config}
+        style={{ width: '100%' }}
+      />
     </div>
   )
 }

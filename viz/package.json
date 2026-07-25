@@ -10,8 +10,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "plotly.js": "^3.7.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-plotly.js": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
