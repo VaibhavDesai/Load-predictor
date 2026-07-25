@@ -75,32 +75,30 @@ jobs:
       - name: Calculate date range
         id: dates
         run: |
-          # Function to parse date expressions
+          # Function to parse date expressions (Linux-compatible using GNU date)
           parse_date() {
             local date_input="$1"
-            local default_days_back="$2"
 
-            if [ -z "$date_input" ]; then
-              # Use default (X days back from today)
-              date -u -v-${default_days_back}d +%Y-%m-%d
+            if [[ "$date_input" == "now()" ]]; then
+              # now() means today
+              date -u +%Y-%m-%d
             elif [[ "$date_input" =~ ^now\(\)-([0-9]+)([dwm]?)$ ]]; then
               # Parse expressions like "now()-30", "now()-4w", "now()-1m"
               local amount="${BASH_REMATCH[1]}"
               local unit="${BASH_REMATCH[2]}"
               case "$unit" in
-                w) days=$((amount * 7)) ;;
-                m) days=$((amount * 30)) ;;
-                *) days=$amount ;;
+                w) date -u -d "${amount} weeks ago" +%Y-%m-%d ;;
+                m) date -u -d "$((amount * 30)) days ago" +%Y-%m-%d ;;
+                *) date -u -d "${amount} days ago" +%Y-%m-%d ;;
               esac
-              date -u -v-${days}d +%Y-%m-%d
             else
               # Assume it's a literal ISO date
               echo "$date_input"
             fi
           }
 
-          END_DATE=$(parse_date "${{ inputs.end_date }}" 0)
-          START_DATE=$(parse_date "${{ inputs.start_date }}" 30)
+          END_DATE=$(parse_date "${{ inputs.end_date }}")
+          START_DATE=$(parse_date "${{ inputs.start_date }}")
 
           echo "start_date=$START_DATE" >> $GITHUB_OUTPUT
           echo "end_date=$END_DATE" >> $GITHUB_OUTPUT
