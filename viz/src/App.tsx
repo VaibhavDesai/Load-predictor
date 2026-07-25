@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { CurveData } from './types'
 import { parseCurveJSON } from './utils'
 import { CurveChart } from './components/CurveChart'
@@ -7,43 +7,88 @@ import { MetadataPanel } from './components/MetadataPanel'
 function App() {
   const [curveData, setCurveData] = useState<CurveData | null>(null)
   const [curveData2, setCurveData2] = useState<CurveData | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [mode, setMode] = useState<'single' | 'compare'>('single')
+  const [sourceUrl, setSourceUrl] = useState<string>('')
+  const [sourceUrl2, setSourceUrl2] = useState<string>('')
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isSecond: boolean = false) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  useEffect(() => {
+    const loadCurvesFromUrl = async () => {
+      const params = new URLSearchParams(window.location.search)
+      const curveUrl = params.get('curve')
+      const compareUrl = params.get('compare')
+      const withUrl = params.get('with')
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
       try {
-        const content = event.target?.result as string
-        const data = parseCurveJSON(content)
-
-        if (isSecond) {
-          setCurveData2(data)
-        } else {
-          setCurveData(data)
-        }
+        setLoading(true)
         setError('')
+
+        if (compareUrl && withUrl) {
+          // Compare mode
+          setMode('compare')
+          const [data1, data2] = await Promise.all([
+            fetchCurveFromUrl(compareUrl),
+            fetchCurveFromUrl(withUrl),
+          ])
+          setCurveData(data1)
+          setCurveData2(data2)
+          setSourceUrl(compareUrl)
+          setSourceUrl2(withUrl)
+        } else if (curveUrl) {
+          // Single curve mode
+          setMode('single')
+          const data = await fetchCurveFromUrl(curveUrl)
+          setCurveData(data)
+          setSourceUrl(curveUrl)
+        } else {
+          // Load default curve from main branch
+          setMode('single')
+          const defaultUrl =
+            'https://raw.githubusercontent.com/VaibhavDesai/Load-predictor/main/data/curves/cprod_amer.json'
+          try {
+            const data = await fetchCurveFromUrl(defaultUrl)
+            setCurveData(data)
+            setSourceUrl(defaultUrl)
+          } catch (err) {
+            // Default curve not available, show empty state
+            setCurveData(null)
+          }
+        }
       } catch (err) {
-        setError(`Failed to parse JSON: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        setError(
+          `Failed to load curve: ${err instanceof Error ? err.message : 'Unknown error'}`
+        )
+        setCurveData(null)
+        setCurveData2(null)
+      } finally {
+        setLoading(false)
       }
     }
-    reader.readAsText(file)
+
+    loadCurvesFromUrl()
+  }, [])
+
+  const fetchCurveFromUrl = async (url: string): Promise<CurveData> => {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch curve (${response.status} ${response.statusText})`)
+    }
+    const content = await response.text()
+    return parseCurveJSON(content)
   }
 
-  const handlePasteJSON = (jsonStr: string, isSecond: boolean = false) => {
+  const getSourceDisplay = (url: string): string => {
+    if (!url) return ''
+    // Extract branch name from GitHub raw URL
+    // Format: https://raw.githubusercontent.com/VaibhavDesai/Load-predictor/BRANCH/data/curves/...
     try {
-      const data = parseCurveJSON(jsonStr)
-      if (isSecond) {
-        setCurveData2(data)
-      } else {
-        setCurveData(data)
-      }
-      setError('')
-    } catch (err) {
-      setError(`Failed to parse JSON: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      const urlObj = new URL(url)
+      const parts = urlObj.pathname.split('/')
+      const branchIndex = parts.findIndex((p) => p === 'Load-predictor') + 1
+      return branchIndex > 0 && parts[branchIndex] ? `from branch: ${parts[branchIndex]}` : ''
+    } catch {
+      return ''
     }
   }
 
@@ -71,97 +116,20 @@ function App() {
         </div>
 
         {error && <div className="error">{error}</div>}
-
-        {mode === 'single' && (
-          <div>
-            <div className="control-row">
-              <div className="control-group">
-                <label>Upload Curve JSON</label>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => handleFileChange(e, false)}
-                />
-              </div>
-            </div>
-
-            <div className="control-row">
-              <div className="control-group" style={{ flex: 1 }}>
-                <label>Or paste JSON</label>
-                <textarea
-                  placeholder="Paste curve JSON here..."
-                  onPaste={(e) => {
-                    const text = e.clipboardData.getData('text/plain')
-                    handlePasteJSON(text, false)
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {mode === 'compare' && (
-          <div>
-            <div style={{ marginBottom: '20px', fontSize: '14px', fontWeight: '600' }}>
-              Curve 1 (Current)
-            </div>
-            <div className="control-row">
-              <div className="control-group">
-                <label>Upload Curve JSON</label>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => handleFileChange(e, false)}
-                />
-              </div>
-            </div>
-
-            <div className="control-row">
-              <div className="control-group" style={{ flex: 1 }}>
-                <label>Or paste JSON</label>
-                <textarea
-                  placeholder="Paste current curve JSON..."
-                  onPaste={(e) => {
-                    const text = e.clipboardData.getData('text/plain')
-                    handlePasteJSON(text, false)
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: '30px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' }}>
-              Curve 2 (Previous/Baseline)
-            </div>
-            <div className="control-row">
-              <div className="control-group">
-                <label>Upload Curve JSON</label>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => handleFileChange(e, true)}
-                />
-              </div>
-            </div>
-
-            <div className="control-row">
-              <div className="control-group" style={{ flex: 1 }}>
-                <label>Or paste JSON</label>
-                <textarea
-                  placeholder="Paste baseline curve JSON..."
-                  onPaste={(e) => {
-                    const text = e.clipboardData.getData('text/plain')
-                    handlePasteJSON(text, true)
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        {loading && <div className="loading">Loading curve from GitHub...</div>}
       </div>
 
       {mode === 'single' && curveData && (
         <>
-          <MetadataPanel data={curveData} title="Curve Information" />
+          <div style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>
+            {sourceUrl && (
+              <div>
+                📊 Curve: {curveData.meta.env}_{curveData.meta.region}{' '}
+                {getSourceDisplay(sourceUrl)}
+              </div>
+            )}
+          </div>
+          <MetadataPanel data={curveData} />
           <CurveChart data={curveData} title="Meeting Pattern Curve" />
         </>
       )}
@@ -170,22 +138,28 @@ function App() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <MetadataPanel data={curveData} title="Current Curve" />
-              <CurveChart data={curveData} title="Current Curve" />
+              {sourceUrl && (
+                <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                  {getSourceDisplay(sourceUrl)}
+                </div>
+              )}
+              <MetadataPanel data={curveData} title="Curve 1" />
+              <CurveChart data={curveData} title="Curve 1" />
             </div>
             <div>
-              <MetadataPanel data={curveData2} title="Baseline Curve" />
-              <CurveChart data={curveData2} title="Baseline Curve" />
+              {sourceUrl2 && (
+                <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                  {getSourceDisplay(sourceUrl2)}
+                </div>
+              )}
+              <MetadataPanel data={curveData2} title="Curve 2" />
+              <CurveChart data={curveData2} title="Curve 2" />
             </div>
           </div>
         </>
       )}
 
-      {mode === 'compare' && curveData && !curveData2 && (
-        <div className="error">Please load both curves to compare</div>
-      )}
-
-      {!curveData && (
+      {!loading && !curveData && (
         <div
           style={{
             background: 'white',
@@ -197,8 +171,11 @@ function App() {
         >
           <p style={{ fontSize: '18px', marginBottom: '10px' }}>
             {mode === 'single'
-              ? 'Upload or paste a curve JSON file to get started'
-              : 'Upload or paste curve JSON files to compare'}
+              ? 'No curve data found. Use a URL parameter to load a curve.'
+              : 'No curve data found. Use URL parameters to compare curves.'}
+          </p>
+          <p style={{ fontSize: '14px', color: '#ccc' }}>
+            Example: ?curve=https://raw.githubusercontent.com/VaibhavDesai/Load-predictor/main/data/curves/cprod_amer.json
           </p>
         </div>
       )}
