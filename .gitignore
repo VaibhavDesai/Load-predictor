@@ -48,7 +48,10 @@ dist/
 Thumbs.db
 
 # Project specific
-data/
+# Allow curves to be tracked, ignore everything else
+data/*
+!data/curves/
+data/curves/.gitkeep
 *.json.bak
 
 # WAP-specific (production only)
