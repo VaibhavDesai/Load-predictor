@@ -29,7 +29,7 @@ on:
 
 jobs:
   generate:
-    runs-on: [self-hosted, wap-connected]
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
