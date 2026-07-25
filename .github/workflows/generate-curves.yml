@@ -22,12 +22,12 @@ on:
           - EMEAR
           - APAC
       start_date:
-        description: 'Start date (ISO format: YYYY-MM-DD)'
+        description: 'Start date (default: 30 days ago). ISO format YYYY-MM-DD, or relative like "now()-52w"'
         required: false
         default: ''
         type: string
       end_date:
-        description: 'End date (ISO format: YYYY-MM-DD)'
+        description: 'End date (default: today). ISO format YYYY-MM-DD, or relative like "now()-0d"'
         required: false
         default: ''
         type: string
@@ -75,15 +75,36 @@ jobs:
       - name: Calculate date range
         id: dates
         run: |
-          if [ -z "${{ inputs.start_date }}" ] || [ -z "${{ inputs.end_date }}" ]; then
-            END_DATE=$(date -u +%Y-%m-%d)
-            START_DATE=$(date -u -v-52d +%Y-%m-%d)
-          else
-            START_DATE=${{ inputs.start_date }}
-            END_DATE=${{ inputs.end_date }}
-          fi
+          # Function to parse date expressions
+          parse_date() {
+            local date_input="$1"
+            local default_days_back="$2"
+
+            if [ -z "$date_input" ]; then
+              # Use default (X days back from today)
+              date -u -v-${default_days_back}d +%Y-%m-%d
+            elif [[ "$date_input" =~ ^now\(\)-([0-9]+)([dwm]?)$ ]]; then
+              # Parse expressions like "now()-30", "now()-4w", "now()-1m"
+              local amount="${BASH_REMATCH[1]}"
+              local unit="${BASH_REMATCH[2]}"
+              case "$unit" in
+                w) days=$((amount * 7)) ;;
+                m) days=$((amount * 30)) ;;
+                *) days=$amount ;;
+              esac
+              date -u -v-${days}d +%Y-%m-%d
+            else
+              # Assume it's a literal ISO date
+              echo "$date_input"
+            fi
+          }
+
+          END_DATE=$(parse_date "${{ inputs.end_date }}" 0)
+          START_DATE=$(parse_date "${{ inputs.start_date }}" 30)
+
           echo "start_date=$START_DATE" >> $GITHUB_OUTPUT
           echo "end_date=$END_DATE" >> $GITHUB_OUTPUT
+          echo "Calculated dates: $START_DATE to $END_DATE"
 
       - name: Generate curves
         run: |
