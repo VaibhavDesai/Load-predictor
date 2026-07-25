@@ -30,9 +30,19 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -52,9 +62,7 @@ jobs:
             --weeks-back ${{ inputs.weeks_back }} \
             --output-dir data/curves
         env:
-          # Use mock mode by default (no credentials needed)
           LP_CONNECTOR_MODE: mock
-          # Optional: Use production WAP if credentials available
           LP_WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
           LP_WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
 
@@ -72,39 +80,35 @@ jobs:
           cd viz
           npm install
           npm run build
-
-          # Copy built files to /docs for GitHub Pages
           mkdir -p ../docs
           cp -r dist/* ../docs/
 
-      - name: Create Pull Request with curves
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: update curves for ${{ inputs.env }}/${{ inputs.region }}'
-          title: 'Curve Update: ${{ inputs.env }}/${{ inputs.region }}'
-          body: |
-            Automated curve generation
+      - name: Create PRs with GitHub App
+        run: |
+          git config user.name "Load Predictor Bot"
+          git config user.email "bot@load-predictor.local"
 
-            **Environment:** ${{ inputs.env }}
-            **Region:** ${{ inputs.region }}
-            **Data period:** Last ${{ inputs.weeks_back }} weeks
+          # Create curves branch and PR
+          git checkout -b curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          git add -f data/curves/
+          if git commit -m "chore: update curves for ${{ inputs.env }}/${{ inputs.region }}"; then
+            git push -u origin curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+            gh pr create \
+              --title "Curve Update: ${{ inputs.env }}/${{ inputs.region }}" \
+              --body "Generated curves for **${{ inputs.env }}/${{ inputs.region }}**\n\nData period: Last ${{ inputs.weeks_back }} weeks\n\nGenerated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --head curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          fi
 
-            Generated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          branch: curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
-          delete-branch: true
-
-      - name: Deploy visualization to main
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: deploy visualization for ${{ inputs.env }}/${{ inputs.region }}'
-          title: 'Deploy: Update visualization for ${{ inputs.env }}/${{ inputs.region }}'
-          body: |
-            Auto-generated visualization update
-
-            **Updated:** /docs for GitHub Pages
-            **Environment:** ${{ inputs.env }}
-            **Region:** ${{ inputs.region }}
-          branch: deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
-          delete-branch: true
+          # Create visualization branch and PR
+          git checkout main
+          git checkout -b deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          git add -f docs/
+          if git commit -m "chore: deploy visualization for ${{ inputs.env }}/${{ inputs.region }}"; then
+            git push -u origin deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+            gh pr create \
+              --title "Deploy: Update visualization for ${{ inputs.env }}/${{ inputs.region }}" \
+              --body "Updated visualization in /docs for GitHub Pages\n\nEnvironment: ${{ inputs.env }}\nRegion: ${{ inputs.region }}" \
+              --head deploy/visualization-${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          fi
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
