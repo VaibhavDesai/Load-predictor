@@ -24,12 +24,12 @@ on:
       start_date:
         description: 'Start date (default: 30 days ago). ISO format YYYY-MM-DD, or relative like "now()-52w"'
         required: false
-        default: ''
+        default: 'now()-30d'
         type: string
       end_date:
         description: 'End date (default: today). ISO format YYYY-MM-DD, or relative like "now()-0d"'
         required: false
-        default: ''
+        default: 'now()'
         type: string
       interval:
         description: 'Aggregation interval in seconds (default 1800 = 30min)'
