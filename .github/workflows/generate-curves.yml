@@ -98,10 +98,13 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-          git add docs/ data/curves/
+          git add -f docs/ data/curves/
 
-          git commit -m "chore: update curves and visualization for ${{ inputs.env }}/${{ inputs.region }}" || true
-          git push
+          if git commit -m "chore: update curves and visualization for ${{ inputs.env }}/${{ inputs.region }}"; then
+            git push
+          else
+            echo "No changes to commit"
+          fi
 
       - name: Create Release
         run: |
