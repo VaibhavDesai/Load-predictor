@@ -89,14 +89,19 @@ jobs:
           git config user.email "bot@load-predictor.local"
 
           # Create curves branch and PR
-          git checkout -b curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+          BRANCH_NAME="curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}"
+          CURVE_FILE="${{ inputs.env }}_${{ inputs.region | lower }}.json"
+          CURVE_URL="https://raw.githubusercontent.com/${{ github.repository }}/${BRANCH_NAME}/data/curves/${CURVE_FILE}"
+          VISUALIZER_URL="https://vaibhavdesai.github.io/Load-predictor/?curve=${CURVE_URL}"
+
+          git checkout -b ${BRANCH_NAME}
           git add -f data/curves/
           if git commit -m "chore: update curves for ${{ inputs.env }}/${{ inputs.region }}"; then
-            git push -u origin curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+            git push -u origin ${BRANCH_NAME}
             gh pr create \
               --title "Curve Update: ${{ inputs.env }}/${{ inputs.region }}" \
-              --body "Generated curves for **${{ inputs.env }}/${{ inputs.region }}**\n\nData period: Last ${{ inputs.weeks_back }} weeks\n\nGenerated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-              --head curves/${{ inputs.env }}-${{ inputs.region }}-${{ github.run_id }}
+              --body "Generated curves for **${{ inputs.env }}/${{ inputs.region }}**\n\nData period: Last ${{ inputs.weeks_back }} weeks\n\n[📊 View in Load Predictor](${VISUALIZER_URL})\n\nGenerated at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --head ${BRANCH_NAME}
           fi
 
           # Create visualization branch and PR
