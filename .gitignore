@@ -63,3 +63,4 @@ starr*.py
 # Credentials
 *_credentials*
 *_secret*
+Load-predictor/
