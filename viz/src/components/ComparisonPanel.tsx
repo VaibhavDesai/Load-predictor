@@ -94,9 +94,8 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
     setLocalCurves(updated)
   }
 
-  const handleClearInput = (index: number) => {
-    const updated = [...localCurves]
-    updated[index] = ''
+  const handleRemoveCurve = (index: number) => {
+    const updated = localCurves.filter((_, i) => i !== index)
     setLocalCurves(updated)
   }
 
@@ -219,7 +218,7 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
                 />
                 {index > 0 && (
                   <button
-                    onClick={() => handleClearInput(index)}
+                    onClick={() => handleRemoveCurve(index)}
                     disabled={isLoading}
                     aria-label={`Remove curve ${index + 1}`}
                     style={{
