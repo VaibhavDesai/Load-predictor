@@ -61,8 +61,8 @@ Replace the current "Compare Curves" tab with an inline panel that allows users 
 - Hover tooltip shows values for visible curves only
 
 **Heatmap:**
-- TBD: Show heatmap for primary curve (Curve 1 / main), or composite heatmap across all? 
-- Recommendation: Show primary curve only to avoid visual complexity
+- Skip heatmap in comparison mode (too complex with multiple overlays)
+- Heatmap only shown in single-curve view
 
 ---
 
@@ -111,14 +111,7 @@ comparisonPanel: { isOpen: boolean, curves: string[] }
 
 ## Metadata Panel (Comparison Mode)
 
-**TBD:** How should stats change for 2–5 curves?
-
-**Options:**
-- A) Show stats for primary curve (Curve 1) only
-- B) Show comparison stats (min/max across all curves, variance)
-- C) Show per-curve stats in a table
-
-**Recommendation:** Option A for MVP (show primary curve stats, other curves in legend)
+Show stats for primary curve (Curve 1 / main) only. Other curves visible in legend but stats focus on baseline.
 
 ---
 
