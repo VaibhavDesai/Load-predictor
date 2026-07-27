@@ -3,6 +3,7 @@ import { CurveData } from './types'
 import { parseCurveJSON } from './utils'
 import { CurveChart } from './components/CurveChart'
 import { MetadataPanel } from './components/MetadataPanel'
+import { Heatmap } from './components/Heatmap'
 
 function App() {
   const [curveData, setCurveData] = useState<CurveData | null>(null)
@@ -130,7 +131,10 @@ function App() {
             )}
           </div>
           <MetadataPanel data={curveData} />
-          <CurveChart data={curveData} title="Meeting Pattern Curve" />
+          <div style={{ marginBottom: '24px' }}>
+            <CurveChart data={curveData} title="Meeting Pattern Curve" />
+          </div>
+          <Heatmap data={curveData} />
         </>
       )}
 

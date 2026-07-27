@@ -25,6 +25,22 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => 
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
   }
 
+  // Calculate per-weekday stats
+  const weekdayStats = Object.entries(data.curves).map(([weekdayStr, slots]) => {
+    const weekday = parseInt(weekdayStr)
+    const values = Object.values(slots) as number[]
+    return {
+      weekday,
+      name: WEEKDAY_NAMES[weekday - 1],
+      peak: Math.max(...values),
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
+      min: Math.min(...values),
+    }
+  })
+
+  const peakWeekday = weekdayStats.reduce((a, b) => (a.peak > b.peak ? a : b))
+  const offPeakWeekday = weekdayStats.reduce((a, b) => (a.peak < b.peak ? a : b))
+
   return (
     <div className="metadata">
       {title && <h2>{title}</h2>}
@@ -76,13 +92,13 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => 
         </div>
       </div>
 
-      {/* Statistics */}
+      {/* Capacity Planning Stats */}
       <div className="metadata-section">
-        <h3>Load Statistics</h3>
+        <h3>Capacity Planning</h3>
         <div className="metadata-grid">
           <div className="metadata-item">
-            <div className="metadata-label">Peak Load</div>
-            <div className="metadata-value" style={{ color: '#ff6b35', fontWeight: 'bold' }}>
+            <div className="metadata-label">Peak Capacity Needed</div>
+            <div className="metadata-value" style={{ color: '#ff6b35', fontWeight: 'bold', fontSize: '24px' }}>
               {meta.summary.peak.value}
             </div>
             <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
@@ -91,31 +107,33 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => 
           </div>
 
           <div className="metadata-item">
-            <div className="metadata-label">Average Load</div>
-            <div className="metadata-value">{meta.summary.average.toFixed(1)}</div>
-            <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>mean across all slots</div>
+            <div className="metadata-label">Busiest Day</div>
+            <div className="metadata-value" style={{ color: '#0066cc', fontWeight: '600' }}>
+              {peakWeekday.name}
+            </div>
+            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+              Peak: {Math.round(peakWeekday.peak)} | Avg: {Math.round(peakWeekday.avg)}
+            </div>
           </div>
 
           <div className="metadata-item">
-            <div className="metadata-label">Median Load</div>
-            <div className="metadata-value">{meta.summary.median.toFixed(1)}</div>
-            <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>50th percentile</div>
+            <div className="metadata-label">Quietest Day</div>
+            <div className="metadata-value" style={{ color: '#999', fontWeight: '600' }}>
+              {offPeakWeekday.name}
+            </div>
+            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+              Peak: {Math.round(offPeakWeekday.peak)} | Avg: {Math.round(offPeakWeekday.avg)}
+            </div>
           </div>
 
           <div className="metadata-item">
-            <div className="metadata-label">Std Dev</div>
-            <div className="metadata-value">{meta.summary.std_dev.toFixed(1)}</div>
-            <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>load variability</div>
-          </div>
-
-          <div className="metadata-item">
-            <div className="metadata-label">Min Load</div>
-            <div className="metadata-value" style={{ color: '#999' }}>{meta.summary.min.toFixed(1)}</div>
-          </div>
-
-          <div className="metadata-item">
-            <div className="metadata-label">Max Load</div>
-            <div className="metadata-value" style={{ color: '#ff6b35' }}>{meta.summary.max.toFixed(1)}</div>
+            <div className="metadata-label">Peak vs Off-Peak</div>
+            <div className="metadata-value" style={{ fontWeight: '600' }}>
+              {(peakWeekday.peak / offPeakWeekday.peak).toFixed(1)}×
+            </div>
+            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+              {peakWeekday.name} vs {offPeakWeekday.name}
+            </div>
           </div>
         </div>
       </div>

@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react'
 import Plot from 'react-plotly.js'
 import { CurveData, WEEKDAY_NAMES } from '../types'
-import { getYAxisDomain } from '../utils'
 
 interface CurveChartProps {
   data: CurveData
@@ -20,11 +19,10 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
     const intervalSeconds = data.meta.aggregation_interval || 1800
     const intervalMinutes = intervalSeconds / 60
 
-    // Create one trace per weekday, with x-axis showing full week (0-168 hours)
+    // Create one trace per weekday
     Object.entries(data.curves).forEach(([weekdayStr, slots], dayIndex) => {
       const weekday = parseInt(weekdayStr)
       const dayName = WEEKDAY_NAMES[weekday - 1]
-      const dayStartHour = (weekday - 1) * 24 // Day 1 starts at 0, Day 2 at 24, etc.
       const x: number[] = []
       const y: number[] = []
       const customData: string[] = []
@@ -41,8 +39,8 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
         const minute = minuteOfDay % 60
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
 
-        // Cumulative hours from start of week
-        x.push(dayStartHour + minuteOfDay / 60)
+        // X-axis is just the slot number (timeslot index)
+        x.push(slot)
         y.push(value as number)
         customData.push(`${dayName} ${timeStr}`)
 
@@ -62,7 +60,7 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
           width: 2.5,
         },
         fill: 'tozeroy',
-        fillcolor: COLORS[dayIndex % COLORS.length] + '1a', // Add transparency
+        fillcolor: COLORS[dayIndex % COLORS.length] + '1a',
         hovertemplate:
           `<b>%{customdata}</b><br>` +
           'Load: %{y:,.0f}<br>' +
@@ -86,10 +84,8 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
   const layout = {
     title: title || undefined,
     xaxis: {
-      title: 'Day of Week',
-      range: [0, 168],
-      tickvals: [12, 36, 60, 84, 108, 132, 156],
-      ticktext: WEEKDAY_NAMES,
+      title: 'Timeslot (30-min intervals)',
+      range: [0, 47],
       gridcolor: '#e0e0e0',
     },
     yaxis: {
@@ -99,7 +95,7 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
     },
     plot_bgcolor: '#fafafa',
     paper_bgcolor: '#ffffff',
-    height: 450,
+    height: 400,
     margin: { l: 60, r: 40, t: 40, b: 60 },
     hovermode: 'x unified',
     legend: {
@@ -117,13 +113,6 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
     displayModeBar: true,
     displaylogo: false,
     modeBarButtonsToRemove: ['pan2d', 'lasso2d'],
-    modeBarButtonsToAdd: [
-      {
-        name: 'Toggle spike lines',
-        icon: { width: 500, height: 500, path: 'M0 0L500 0L500 500L0 500Z' },
-        click: () => {},
-      },
-    ],
   }
 
   return (
