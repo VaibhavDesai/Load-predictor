@@ -3,69 +3,84 @@ import Plot from 'react-plotly.js'
 import { CurveData, WEEKDAY_NAMES } from '../types'
 
 interface CurveChartProps {
-  data: CurveData
+  data: CurveData | CurveData[]
   title?: string
+  isComparison?: boolean
 }
 
 const COLORS = ['#0066cc', '#00a86b', '#ff6b35', '#f7b801', '#c41e3a', '#8b5fbf', '#ff69b4']
 
-export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
+export const CurveChart: React.FC<CurveChartProps> = ({ data, title, isComparison }) => {
   const { traces, yMin, yMax } = useMemo(() => {
     const traces: any[] = []
     let globalYMin = Infinity
     let globalYMax = -Infinity
 
-    // Determine interval from metadata (default 1800 seconds = 30 minutes)
-    const intervalSeconds = data.meta.aggregation_interval || 1800
+    const curveArray = Array.isArray(data) ? data : [data]
+    const intervalSeconds = (Array.isArray(data) ? data[0] : data).meta.aggregation_interval || 1800
     const intervalMinutes = intervalSeconds / 60
 
-    // Create one trace per weekday
-    Object.entries(data.curves).forEach(([weekdayStr, slots], dayIndex) => {
-      const weekday = parseInt(weekdayStr)
-      const dayName = WEEKDAY_NAMES[weekday - 1]
-      const x: number[] = []
-      const y: number[] = []
-      const customData: string[] = []
+    curveArray.forEach((curveData, curveIndex) => {
+      Object.entries(curveData.curves).forEach(([weekdayStr, slots], dayIndex) => {
+        const weekday = parseInt(weekdayStr)
+        const dayName = WEEKDAY_NAMES[weekday - 1]
+        const x: number[] = []
+        const y: number[] = []
+        const customData: string[] = []
 
-      // Sort slots numerically
-      const sortedSlots = Object.entries(slots).sort(
-        ([a], [b]) => parseInt(a) - parseInt(b)
-      )
+        const sortedSlots = Object.entries(slots).sort(
+          ([a], [b]) => parseInt(a) - parseInt(b)
+        )
 
-      sortedSlots.forEach(([slotStr, value]) => {
-        const slot = parseInt(slotStr)
-        const minuteOfDay = slot * intervalMinutes
-        const hour = Math.floor(minuteOfDay / 60)
-        const minute = minuteOfDay % 60
-        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        sortedSlots.forEach(([slotStr, value]) => {
+          const slot = parseInt(slotStr)
+          const minuteOfDay = slot * intervalMinutes
+          const hour = Math.floor(minuteOfDay / 60)
+          const minute = minuteOfDay % 60
+          const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
 
-        // X-axis is just the slot number (timeslot index)
-        x.push(slot)
-        y.push(value as number)
-        customData.push(`${dayName} ${timeStr}`)
+          x.push(slot)
+          y.push(value as number)
 
-        globalYMin = Math.min(globalYMin, value as number)
-        globalYMax = Math.max(globalYMax, value as number)
-      })
+          const curveLabel =
+            curveArray.length > 1
+              ? `${curveData.meta.env.toUpperCase()}_${curveData.meta.region.toUpperCase()}`
+              : dayName
+          customData.push(
+            curveArray.length > 1 ? `${curveLabel} ${dayName} ${timeStr}` : `${dayName} ${timeStr}`
+          )
 
-      traces.push({
-        x,
-        y,
-        customdata: customData,
-        name: dayName,
-        type: 'scatter',
-        mode: 'lines',
-        line: {
-          color: COLORS[dayIndex % COLORS.length],
-          width: 2.5,
-        },
-        fill: 'tozeroy',
-        fillcolor: COLORS[dayIndex % COLORS.length] + '1a',
-        hovertemplate:
-          `<b>%{customdata}</b><br>` +
-          'Load: %{y:,.0f}<br>' +
-          '<extra></extra>',
-        visible: true,
+          globalYMin = Math.min(globalYMin, value as number)
+          globalYMax = Math.max(globalYMax, value as number)
+        })
+
+        let color: string
+        if (curveArray.length > 1) {
+          color = COLORS[curveIndex % COLORS.length]
+        } else {
+          color = COLORS[dayIndex % COLORS.length]
+        }
+
+        traces.push({
+          x,
+          y,
+          customdata: customData,
+          name:
+            curveArray.length > 1
+              ? `${curveData.meta.env.toUpperCase()}_${curveData.meta.region.toUpperCase()}`
+              : dayName,
+          type: 'scatter',
+          mode: 'lines',
+          line: {
+            color: color,
+            width: 2.5,
+          },
+          fill: 'tozeroy',
+          fillcolor: color + '1a',
+          hovertemplate:
+            `<b>%{customdata}</b><br>` + 'Load: %{y:,.0f}<br>' + '<extra></extra>',
+          visible: true,
+        })
       })
     })
 
@@ -75,7 +90,7 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title }) => {
       yMin: Math.max(0, globalYMin - padding),
       yMax: globalYMax + padding,
     }
-  }, [data.curves])
+  }, [data])
 
   if (traces.length === 0) {
     return <div className="error">No data to display</div>
