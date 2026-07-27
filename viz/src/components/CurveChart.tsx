@@ -8,16 +8,33 @@ interface CurveChartProps {
   isComparison?: boolean
 }
 
+interface PlotlyTrace {
+  x: number[]
+  y: number[]
+  customdata: string[]
+  name: string
+  type: 'scatter'
+  mode: 'lines'
+  line: { color: string; width: number }
+  fill: 'tozeroy'
+  fillcolor: string
+  hovertemplate: string
+  visible: boolean
+}
+
 const COLORS = ['#0066cc', '#00a86b', '#ff6b35', '#f7b801', '#c41e3a', '#8b5fbf', '#ff69b4']
 
 export const CurveChart: React.FC<CurveChartProps> = ({ data, title, isComparison }) => {
   const { traces, yMin, yMax } = useMemo(() => {
-    const traces: any[] = []
+    const traces: PlotlyTrace[] = []
     let globalYMin = Infinity
     let globalYMax = -Infinity
 
     const curveArray = Array.isArray(data) ? data : [data]
-    const intervalSeconds = (Array.isArray(data) ? data[0] : data).meta.aggregation_interval || 1800
+    if (curveArray.length === 0) {
+      return { traces: [], yMin: 0, yMax: 100 }
+    }
+    const intervalSeconds = curveArray[0].meta.aggregation_interval || 1800
     const intervalMinutes = intervalSeconds / 60
 
     curveArray.forEach((curveData, curveIndex) => {

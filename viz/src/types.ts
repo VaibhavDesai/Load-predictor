@@ -5,6 +5,8 @@ export interface CurveMeta {
   data_range_start: string
   data_range_end: string
   total_samples: number
+  aggregation_interval?: number
+  aggregation_method?: string
   summary: {
     peak: {
       weekday: number
