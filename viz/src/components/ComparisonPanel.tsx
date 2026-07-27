@@ -217,11 +217,11 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
                     color: '#333',
                   }}
                 />
-                {curve && (
+                {index > 0 && (
                   <button
                     onClick={() => handleClearInput(index)}
                     disabled={isLoading}
-                    aria-label={`Clear curve ${index + 1}`}
+                    aria-label={`Remove curve ${index + 1}`}
                     style={{
                       ...CLEAR_BUTTON_STYLE,
                       cursor: isLoading ? 'not-allowed' : 'pointer',
