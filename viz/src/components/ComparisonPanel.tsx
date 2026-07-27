@@ -111,7 +111,8 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
   }
 
   const getPlaceholder = (index: number): string => {
-    return index === 0 ? 'main' : `PR-${PR_BASE_NUMBER + index}`
+    // Show format examples: main, PR-125, curves/branch-name
+    return `e.g. main / PR-125 / curves/branch-name`
   }
 
   return (

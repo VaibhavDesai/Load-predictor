@@ -20,6 +20,7 @@ function App() {
   const [comparisonCurveIds, setComparisonCurveIds] = useState<string[]>(['main'])
   const [comparisonError, setComparisonError] = useState<string>('')
   const [comparisonLoading, setComparisonLoading] = useState(false)
+  const [currentBranchId, setCurrentBranchId] = useState<string>('main')
 
   const fetchCurveFromUrl = async (url: string): Promise<CurveData> => {
     console.log('Fetching curve from:', url)
@@ -90,6 +91,10 @@ function App() {
       const params = new URLSearchParams(window.location.search)
       const curveUrl = params.get('curve')
       const curvesParam = params.get('curves')
+      const branchParam = params.get('branch') || 'main'
+
+      // Set the current branch ID
+      setCurrentBranchId(branchParam)
 
       try {
         setLoading(true)
@@ -142,6 +147,9 @@ function App() {
     if (!url) return ''
     // Extract branch name from GitHub raw URL
     // Format: https://raw.githubusercontent.com/VaibhavDesai/Load-predictor/BRANCH/data/curves/...
+    if (currentBranchId && currentBranchId !== 'main') {
+      return `from branch: ${currentBranchId}`
+    }
     try {
       const urlObj = new URL(url)
       const parts = urlObj.pathname.split('/')
@@ -184,7 +192,7 @@ function App() {
           {mode === 'single' && (
             <button
               onClick={() => {
-                setComparisonCurveIds(['main', 'main'])
+                setComparisonCurveIds([currentBranchId, currentBranchId])
                 setComparisonPanelOpen(true)
               }}
               style={{

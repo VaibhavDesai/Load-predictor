@@ -27,7 +27,14 @@ export function validateCurveIdentifier(identifier: string): boolean {
 
   // Check if it matches "PR-###" format
   const prPattern = /^PR-\d+$/i;
-  return prPattern.test(identifier);
+  if (prPattern.test(identifier)) {
+    return true;
+  }
+
+  // Check if it's a branch name (e.g., "curves/cprod-AMER-30285369312")
+  // Branch names can contain letters, numbers, slashes, hyphens, underscores, dots
+  const branchPattern = /^[a-zA-Z0-9/_.-]+$/;
+  return branchPattern.test(identifier);
 }
 
 /**
@@ -69,6 +76,6 @@ export function mapCurveIdentifierToUrl(
     return `https://api.github.com/repos/${owner}/${repo}/contents/data/curves/${filename}?ref=refs/pull/${prNumber}/merge`;
   }
 
-  // This should never be reached if validateCurveIdentifier works correctly
-  throw new Error(`Invalid curve identifier: ${identifier}. Use 'main' or 'PR-123'`);
+  // Handle branch names (e.g., "curves/cprod-AMER-30285369312")
+  return `${baseUrl}/${identifier}/data/curves/${filename}`;
 }
