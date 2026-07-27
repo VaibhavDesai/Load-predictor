@@ -50,8 +50,8 @@ function App() {
       const region = curveData.meta.region
 
       const urls = filledIds.map((id) => {
-        const mapped = mapCurveIdentifierToUrl(id, env, region)
-        return { id: mapped.id, url: mapped.url }
+        const url = mapCurveIdentifierToUrl(id, env, region)
+        return { id, url }
       })
 
       const fetchPromises = urls.map((u) =>
