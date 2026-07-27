@@ -10,6 +10,64 @@ interface ComparisonPanelProps {
   onCompare: (curves: string[]) => Promise<void>
 }
 
+// Shared style constants to reduce duplication
+const BACKDROP_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  zIndex: 998,
+}
+
+const CLOSE_BUTTON_STYLE: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  fontSize: '24px',
+  cursor: 'pointer',
+  color: '#999',
+  padding: '0 8px',
+  lineHeight: 1,
+}
+
+const ERROR_ALERT_STYLE: React.CSSProperties = {
+  backgroundColor: '#ffe6e6',
+  color: '#c41e3a',
+  padding: '12px',
+  borderRadius: '4px',
+  fontSize: '14px',
+}
+
+const LOADING_ALERT_STYLE: React.CSSProperties = {
+  backgroundColor: '#e6f3ff',
+  color: '#0066cc',
+  padding: '12px',
+  borderRadius: '4px',
+  fontSize: '14px',
+}
+
+const BUTTON_STYLE: React.CSSProperties = {
+  flex: 1,
+  padding: '10px 16px',
+  color: '#333',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: 600,
+}
+
+const CLEAR_BUTTON_STYLE: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: '20px',
+  color: '#999',
+  padding: '4px 8px',
+  lineHeight: 1,
+}
+
+// Base curve placeholder: Start from PR-124 (123 is reserved for main curve, so index 1 starts at 124)
+const PR_BASE_NUMBER = 123
+
 export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
   isOpen,
   onClose,
@@ -21,10 +79,10 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
 }) => {
   const [localCurves, setLocalCurves] = useState<string[]>(curves)
 
-  // Sync localCurves with curves prop when isOpen changes or curves prop changes
+  // Sync localCurves with curves prop when curves prop changes
   useEffect(() => {
     setLocalCurves(curves)
-  }, [curves, isOpen])
+  }, [curves])
 
   if (!isOpen) {
     return null
@@ -48,19 +106,14 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
   }
 
   const getPlaceholder = (index: number): string => {
-    return index === 0 ? 'main' : `PR-${123 + index}`
+    return index === 0 ? 'main' : `PR-${PR_BASE_NUMBER + index}`
   }
 
   return (
     <>
       {/* Backdrop */}
       <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          zIndex: 998,
-        }}
+        style={BACKDROP_STYLE}
         onClick={onClose}
       />
 
@@ -93,15 +146,8 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
           <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#333' }}>Compare Curves</h2>
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: '#999',
-              padding: '0 8px',
-              lineHeight: 1,
-            }}
+            aria-label="Close comparison panel"
+            style={CLOSE_BUTTON_STYLE}
           >
             ×
           </button>
@@ -121,13 +167,8 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
           {/* Error Message */}
           {error && (
             <div
-              style={{
-                backgroundColor: '#ffe6e6',
-                color: '#c41e3a',
-                padding: '12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
+              role="alert"
+              style={ERROR_ALERT_STYLE}
             >
               {error}
             </div>
@@ -136,13 +177,8 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
           {/* Loading Message */}
           {isLoading && (
             <div
-              style={{
-                backgroundColor: '#e6f3ff',
-                color: '#0066cc',
-                padding: '12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
+              role="alert"
+              style={LOADING_ALERT_STYLE}
             >
               Loading curves...
             </div>
@@ -150,12 +186,16 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
 
           {/* Curve Input Fields */}
           {localCurves.map((curve, index) => (
-            <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: 600, color: '#333' }}>
+            <div key={`curve-${index}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label
+                htmlFor={`curve-input-${index}`}
+                style={{ fontSize: '14px', fontWeight: 600, color: '#333' }}
+              >
                 Curve {index + 1}
               </label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <input
+                  id={`curve-input-${index}`}
                   type="text"
                   value={curve}
                   onChange={(e) => handleInputChange(index, e.target.value)}
@@ -175,14 +215,10 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
                   <button
                     onClick={() => handleClearInput(index)}
                     disabled={isLoading}
+                    aria-label={`Clear curve ${index + 1}`}
                     style={{
-                      background: 'none',
-                      border: 'none',
+                      ...CLEAR_BUTTON_STYLE,
                       cursor: isLoading ? 'not-allowed' : 'pointer',
-                      fontSize: '20px',
-                      color: '#999',
-                      padding: '4px 8px',
-                      lineHeight: 1,
                       opacity: isLoading ? 0.5 : 1,
                     }}
                   >
@@ -206,15 +242,8 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
           <button
             onClick={onClose}
             style={{
-              flex: 1,
-              padding: '10px 16px',
+              ...BUTTON_STYLE,
               background: '#f5f5f5',
-              color: '#333',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
             }}
           >
             Cancel
@@ -223,15 +252,10 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
             onClick={handleDone}
             disabled={isLoading}
             style={{
-              flex: 1,
-              padding: '10px 16px',
+              ...BUTTON_STYLE,
               background: '#0066cc',
               color: 'white',
-              border: 'none',
-              borderRadius: '4px',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
               opacity: isLoading ? 0.6 : 1,
             }}
           >
