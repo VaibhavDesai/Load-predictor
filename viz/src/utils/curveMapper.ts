@@ -64,7 +64,8 @@ export function mapCurveIdentifierToUrl(
   const prMatch = identifier.match(/^PR-(\d+)$/i);
   if (prMatch) {
     const prNumber = prMatch[1];
-    return `${baseUrl}/refs/pull/${prNumber}/head/data/curves/${filename}`;
+    // Use pull/<number> format for accessing PR files
+    return `${baseUrl}/pull/${prNumber}/data/curves/${filename}`;
   }
 
   // This should never be reached if validateCurveIdentifier works correctly
