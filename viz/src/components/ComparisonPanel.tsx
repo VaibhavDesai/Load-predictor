@@ -105,6 +105,12 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
     await onCompare(localCurves)
   }
 
+  const handleAddCurve = () => {
+    if (localCurves.length < 5) {
+      setLocalCurves([...localCurves, ''])
+    }
+  }
+
   const getPlaceholder = (index: number): string => {
     return index === 0 ? 'main' : `PR-${PR_BASE_NUMBER + index}`
   }
@@ -228,6 +234,27 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
               </div>
             </div>
           ))}
+
+          {/* Add Curve Button */}
+          {localCurves.length < 5 && (
+            <button
+              onClick={handleAddCurve}
+              disabled={isLoading}
+              style={{
+                padding: '10px 16px',
+                background: '#f5f5f5',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#0066cc',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.5 : 1,
+              }}
+            >
+              + Add Curve
+            </button>
+          )}
         </div>
 
         {/* Footer with Done Button */}
