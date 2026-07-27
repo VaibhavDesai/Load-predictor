@@ -90,7 +90,7 @@ export const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
 
   const handleInputChange = (index: number, value: string) => {
     const updated = [...localCurves]
-    updated[index] = value.toLowerCase().trim()
+    updated[index] = value.trim()
     setLocalCurves(updated)
   }
 
