@@ -101,19 +101,26 @@ function App() {
       </div>
 
       <div className="controls">
-        <div className="tab-container">
-          <button
-            className={`tab ${mode === 'single' ? 'active' : ''}`}
-            onClick={() => setMode('single')}
-          >
-            Single Curve
-          </button>
-          <button
-            className={`tab ${mode === 'compare' ? 'active' : ''}`}
-            onClick={() => setMode('compare')}
-          >
-            Compare Curves
-          </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="tab-container">
+            <button
+              className={`tab ${mode === 'single' ? 'active' : ''}`}
+              onClick={() => setMode('single')}
+            >
+              Single Curve
+            </button>
+            <button
+              className={`tab ${mode === 'compare' ? 'active' : ''}`}
+              onClick={() => setMode('compare')}
+            >
+              Compare Curves
+            </button>
+          </div>
+          {mode === 'single' && curveData && sourceUrl && (
+            <div style={{ fontSize: '13px', color: '#999' }}>
+              📊 {curveData.meta.env.toUpperCase()}_{curveData.meta.region.toUpperCase()} {getSourceDisplay(sourceUrl)}
+            </div>
+          )}
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -122,14 +129,6 @@ function App() {
 
       {mode === 'single' && curveData && (
         <>
-          <div style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>
-            {sourceUrl && (
-              <div>
-                📊 Curve: {curveData.meta.env}_{curveData.meta.region}{' '}
-                {getSourceDisplay(sourceUrl)}
-              </div>
-            )}
-          </div>
           <MetadataPanel data={curveData} />
           <div style={{ marginBottom: '24px' }}>
             <CurveChart data={curveData} title="Meeting Pattern Curve" />
