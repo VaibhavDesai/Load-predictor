@@ -8,6 +8,33 @@ interface MetadataPanelProps {
 
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+const StatCard: React.FC<{ label: string; value: string | number; unit?: string; highlight?: boolean }> = ({
+  label,
+  value,
+  unit,
+  highlight,
+}) => (
+  <div
+    style={{
+      background: highlight ? '#f0f7ff' : '#fafafa',
+      border: `1px solid ${highlight ? '#d0e8ff' : '#e0e0e0'}`,
+      borderRadius: '8px',
+      padding: '16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+    }}
+  >
+    <div style={{ fontSize: '12px', fontWeight: 500, color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      {label}
+    </div>
+    <div style={{ fontSize: '24px', fontWeight: 700, color: highlight ? '#0066cc' : '#333' }}>
+      {value}
+      {unit && <span style={{ fontSize: '14px', color: '#666', fontWeight: 500, marginLeft: '4px' }}>{unit}</span>}
+    </div>
+  </div>
+)
+
 export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => {
   const meta = data.meta
 
@@ -42,97 +69,103 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title }) => 
   const offPeakWeekday = weekdayStats.reduce((a, b) => (a.peak < b.peak ? a : b))
 
   return (
-    <div className="metadata">
-      {title && <h2>{title}</h2>}
+    <div style={{ padding: '24px', background: '#ffffff', borderRadius: '12px', marginBottom: '24px' }}>
+      {title && <h2 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: 600, color: '#333' }}>{title}</h2>}
 
-      {/* Source Info */}
-      <div className="metadata-section">
-        <h3>Source</h3>
-        <div className="metadata-grid">
-          <div className="metadata-item">
-            <div className="metadata-label">Environment</div>
-            <div className="metadata-value">{meta.env}</div>
-          </div>
-          <div className="metadata-item">
-            <div className="metadata-label">Region</div>
-            <div className="metadata-value">{meta.region}</div>
-          </div>
-          <div className="metadata-item">
-            <div className="metadata-label">Generated</div>
-            <div className="metadata-value" style={{ fontSize: '12px' }}>
-              {new Date(meta.generated_at).toLocaleString()}
-            </div>
-          </div>
+      {/* Source Section */}
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Source
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <StatCard label="Environment" value={meta.env} />
+          <StatCard label="Region" value={meta.region} />
+          <StatCard label="Generated" value={new Date(meta.generated_at).toLocaleDateString()} />
         </div>
       </div>
 
-      {/* Data Period & Processing */}
-      <div className="metadata-section">
-        <h3>Data Processing</h3>
-        <div className="metadata-grid">
-          <div className="metadata-item">
-            <div className="metadata-label">Data Period</div>
-            <div className="metadata-value" style={{ fontSize: '12px' }}>
-              {new Date(meta.data_range_start).toLocaleDateString()} to{' '}
-              {new Date(meta.data_range_end).toLocaleDateString()}
-            </div>
-          </div>
-          <div className="metadata-item">
-            <div className="metadata-label">Total Samples</div>
-            <div className="metadata-value">{meta.total_samples.toLocaleString()}</div>
-          </div>
-          <div className="metadata-item">
-            <div className="metadata-label">Aggregation Interval</div>
-            <div className="metadata-value">{formatInterval(meta.aggregation_interval || 1800)}</div>
-          </div>
-          <div className="metadata-item">
-            <div className="metadata-label">Aggregation Method</div>
-            <div className="metadata-value">{meta.aggregation_method || 'mean'}</div>
-          </div>
+      {/* Data Processing Section */}
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Data Processing
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          <StatCard
+            label="Data Period"
+            value={`${new Date(meta.data_range_start).toLocaleDateString()} → ${new Date(meta.data_range_end).toLocaleDateString()}`}
+          />
+          <StatCard label="Total Samples" value={meta.total_samples.toLocaleString()} />
+          <StatCard label="Interval" value={formatInterval(meta.aggregation_interval || 1800)} />
+          <StatCard label="Aggregation" value={meta.aggregation_method || 'mean'} />
         </div>
       </div>
 
-      {/* Capacity Planning Stats */}
-      <div className="metadata-section">
-        <h3>Capacity Planning</h3>
-        <div className="metadata-grid">
-          <div className="metadata-item">
-            <div className="metadata-label">Peak Capacity Needed</div>
-            <div className="metadata-value" style={{ color: '#ff6b35', fontWeight: 'bold', fontSize: '24px' }}>
-              {meta.summary.peak.value}
+      {/* Capacity Planning Section */}
+      <div>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Capacity Planning
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+          {/* Peak Capacity - Large Card */}
+          <div
+            style={{
+              gridColumn: '1 / 2',
+              background: 'linear-gradient(135deg, #ff6b35 0%, #ff8555 100%)',
+              borderRadius: '8px',
+              padding: '20px',
+              color: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '140px',
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 500, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Peak Capacity Needed
             </div>
-            <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-              {`${WEEKDAY_NAMES[meta.summary.peak.weekday - 1]} at ${formatPeakTime(meta.summary.peak.slot, meta.aggregation_interval || 1800)}`}
+            <div>
+              <div style={{ fontSize: '42px', fontWeight: 700, lineHeight: 1 }}>
+                {Math.round(meta.summary.peak.value)}
+              </div>
+              <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '8px' }}>
+                {WEEKDAY_NAMES[meta.summary.peak.weekday - 1]} at{' '}
+                {formatPeakTime(meta.summary.peak.slot, meta.aggregation_interval || 1800)}
+              </div>
             </div>
           </div>
 
-          <div className="metadata-item">
-            <div className="metadata-label">Busiest Day</div>
-            <div className="metadata-value" style={{ color: '#0066cc', fontWeight: '600' }}>
-              {peakWeekday.name}
-            </div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-              Peak: {Math.round(peakWeekday.peak)} | Avg: {Math.round(peakWeekday.avg)}
-            </div>
+          {/* Stats Grid */}
+          <div style={{ display: 'grid', gridTemplateRows: 'repeat(2, 1fr)', gap: '16px' }}>
+            <StatCard label="Busiest Day" value={peakWeekday.name} highlight={true} />
+            <StatCard label="Quietest Day" value={offPeakWeekday.name} />
           </div>
 
-          <div className="metadata-item">
-            <div className="metadata-label">Quietest Day</div>
-            <div className="metadata-value" style={{ color: '#999', fontWeight: '600' }}>
-              {offPeakWeekday.name}
+          {/* Detailed Stats */}
+          <div style={{ gridColumn: '1 / 3', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div style={{ background: '#fafafa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px', fontWeight: 500 }}>Busiest Peak</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0066cc' }}>{Math.round(peakWeekday.peak)}</div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>{peakWeekday.name}</div>
             </div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-              Peak: {Math.round(offPeakWeekday.peak)} | Avg: {Math.round(offPeakWeekday.avg)}
-            </div>
-          </div>
 
-          <div className="metadata-item">
-            <div className="metadata-label">Peak vs Off-Peak</div>
-            <div className="metadata-value" style={{ fontWeight: '600' }}>
-              {(peakWeekday.peak / offPeakWeekday.peak).toFixed(1)}×
+            <div style={{ background: '#fafafa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px', fontWeight: 500 }}>Busiest Avg</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#666' }}>{Math.round(peakWeekday.avg)}</div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>{peakWeekday.name}</div>
             </div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-              {peakWeekday.name} vs {offPeakWeekday.name}
+
+            <div style={{ background: '#fafafa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px', fontWeight: 500 }}>Quietest Peak</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#999' }}>{Math.round(offPeakWeekday.peak)}</div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>{offPeakWeekday.name}</div>
+            </div>
+
+            <div style={{ background: '#fafafa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px', fontWeight: 500 }}>Peak vs Off-Peak</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0066cc' }}>
+                {(peakWeekday.peak / offPeakWeekday.peak).toFixed(1)}×
+              </div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>ratio</div>
             </div>
           </div>
         </div>
