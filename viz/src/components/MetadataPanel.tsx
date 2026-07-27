@@ -119,7 +119,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title, isCom
           <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Capacity Planning
           </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
           {/* Peak Capacity - Large Card */}
           <div
             style={{
@@ -182,7 +182,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({ data, title, isCom
               <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>ratio</div>
             </div>
           </div>
-        </div>
+          </div>
         </div>
       )}
     </div>
