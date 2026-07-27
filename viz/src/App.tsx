@@ -22,11 +22,22 @@ function App() {
   const [comparisonLoading, setComparisonLoading] = useState(false)
 
   const fetchCurveFromUrl = async (url: string): Promise<CurveData> => {
+    console.log('Fetching curve from:', url)
     const response = await fetch(url)
     if (!response.ok) {
+      console.error('Fetch failed:', response.status, response.statusText, 'URL:', url)
       throw new Error(`Failed to fetch curve (${response.status} ${response.statusText})`)
     }
-    const content = await response.text()
+    let content = await response.text()
+
+    // Handle GitHub API JSON response (base64-encoded content)
+    if (url.includes('api.github.com')) {
+      const jsonData = JSON.parse(content)
+      if (jsonData.content && jsonData.encoding === 'base64') {
+        content = atob(jsonData.content)
+      }
+    }
+
     return parseCurveJSON(content)
   }
 
@@ -172,7 +183,10 @@ function App() {
           </div>
           {mode === 'single' && (
             <button
-              onClick={() => setComparisonPanelOpen(true)}
+              onClick={() => {
+                setComparisonCurveIds(['main', 'main'])
+                setComparisonPanelOpen(true)
+              }}
               style={{
                 padding: '8px 16px',
                 background: '#0066cc',
@@ -225,7 +239,7 @@ function App() {
           </div>
           <MetadataPanel data={curveData} title="Primary Curve" isComparison={true} />
           <div style={{ marginBottom: '24px' }}>
-            <CurveChart data={compareCurves} isComparison={true} />
+            <CurveChart data={compareCurves} isComparison={true} curveIds={comparisonCurveIds} />
           </div>
         </>
       )}

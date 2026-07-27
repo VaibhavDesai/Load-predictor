@@ -52,7 +52,7 @@ export function mapCurveIdentifierToUrl(
     throw new Error(`Invalid curve identifier: ${identifier}. Use 'main' or 'PR-123'`);
   }
 
-  const filename = `${env}_${region}.json`;
+  const filename = `${env.toLowerCase()}_${region.toLowerCase()}.json`;
   const baseUrl = `https://raw.githubusercontent.com/${owner}/${repo}`;
 
   // Handle "main" branch (case-insensitive)
@@ -64,8 +64,9 @@ export function mapCurveIdentifierToUrl(
   const prMatch = identifier.match(/^PR-(\d+)$/i);
   if (prMatch) {
     const prNumber = prMatch[1];
-    // Use pull/<number> format for accessing PR files
-    return `${baseUrl}/pull/${prNumber}/data/curves/${filename}`;
+    // Use GitHub's pull requests API ref for accessing PR branch files
+    // The merge commit is available at refs/pull/PR_NUMBER/merge
+    return `https://api.github.com/repos/${owner}/${repo}/contents/data/curves/${filename}?ref=refs/pull/${prNumber}/merge`;
   }
 
   // This should never be reached if validateCurveIdentifier works correctly

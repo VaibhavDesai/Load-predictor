@@ -6,6 +6,7 @@ interface CurveChartProps {
   data: CurveData | CurveData[]
   title?: string
   isComparison?: boolean
+  curveIds?: string[]
 }
 
 interface PlotlyTrace {
@@ -22,9 +23,20 @@ interface PlotlyTrace {
   visible: boolean
 }
 
-const COLORS = ['#0066cc', '#00a86b', '#ff6b35', '#f7b801', '#c41e3a', '#8b5fbf', '#ff69b4']
+const COLORS = [
+  '#1f77b4', // blue
+  '#ff7f0e', // orange
+  '#2ca02c', // green
+  '#d62728', // red
+  '#9467bd', // purple
+  '#8c564b', // brown
+  '#e377c2', // pink
+  '#7f7f7f', // gray
+  '#bcbd22', // olive
+  '#17becf', // cyan
+]
 
-export const CurveChart: React.FC<CurveChartProps> = ({ data, title, isComparison }) => {
+export const CurveChart: React.FC<CurveChartProps> = ({ data, title, isComparison, curveIds }) => {
   const { traces, yMin, yMax } = useMemo(() => {
     const traces: PlotlyTrace[] = []
     let globalYMin = Infinity
@@ -73,19 +85,21 @@ export const CurveChart: React.FC<CurveChartProps> = ({ data, title, isCompariso
 
         let color: string
         if (curveArray.length > 1) {
-          color = COLORS[curveIndex % COLORS.length]
+          // For multi-curve comparison: vary color by both curve and day
+          color = COLORS[(curveIndex * 7 + dayIndex) % COLORS.length]
         } else {
           color = COLORS[dayIndex % COLORS.length]
         }
+
+        const traceName = curveArray.length > 1
+          ? `${curveIds?.[curveIndex] || `Curve ${curveIndex + 1}`}-${dayName}`
+          : dayName
 
         traces.push({
           x,
           y,
           customdata: customData,
-          name:
-            curveArray.length > 1
-              ? `${curveData.meta.env.toUpperCase()}_${curveData.meta.region.toUpperCase()}`
-              : dayName,
+          name: traceName,
           type: 'scatter',
           mode: 'lines',
           line: {
